@@ -39,6 +39,19 @@ func (m ExactMatcher) Match(kv KV) bool {
 	return kv.Key == m.prefix
 }
 
+type DoesNotStartWithMatcher struct {
+	prefixes []string
+}
+
+func (m DoesNotStartWithMatcher) Match(kv KV) bool {
+	for _, p := range m.prefixes {
+		if p != "" && kv.StartsWith(p) {
+			return false
+		}
+	}
+	return true
+}
+
 func filterKV(kvs <-chan KV, matcher KVMatcher) <-chan KV {
 	out := make(chan KV, 10)
 	go func() {

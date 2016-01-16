@@ -40,7 +40,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) serveGetKV(w http.ResponseWriter, r *http.Request) {
-	//	token := r.URL.Query().Get("token")
+	token := r.URL.Query().Get("token")
+	tokenExists, _ := s.rconn.HExists("acl", token).Result()
+	if token == "" || !tokenExists {
+		token = "anonymous"
+	}
 	recurse := r.URL.Query().Get("recurse")
 	prefix := strings.Replace(r.URL.Path, "/v1/kv/", "", -1)
 	var matcher KVMatcher
@@ -50,8 +54,13 @@ func (s *Server) serveGetKV(w http.ResponseWriter, r *http.Request) {
 		matcher = ExactMatcher{prefix: prefix}
 	}
 
+	// filter out keys starting with acl
+	aclString, _ := s.rconn.HGet("acl", token).Result()
+	acls := strings.Split(aclString, ",")
+	aclMatcher := DoesNotStartWithMatcher{prefixes: acls}
+
 	kvs := make([]KV, 0)
-	for kv := range filterKV(mapKV(s.rconn.GetAllKV(), base64ToStringKV), matcher) {
+	for kv := range filterKV(filterKV(mapKV(s.rconn.GetAllKV(), base64ToStringKV), matcher), aclMatcher) {
 		kvs = append(kvs, kv)
 	}
 	j, _ := json.Marshal(kvs)
