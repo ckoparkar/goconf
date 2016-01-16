@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -30,20 +31,29 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case kvPattern.MatchString(r.URL.Path):
 		if r.Method == "GET" {
 			s.serveGetKV(w, r)
+			return
 		} else {
 			http.Error(w, "No route found.", http.StatusNotFound)
+			return
 		}
 	}
 }
 
 func (s *Server) serveGetKV(w http.ResponseWriter, r *http.Request) {
-	//	recurse := r.URL.Query().Get("recurse")
 	//	token := r.URL.Query().Get("token")
+	recurse := r.URL.Query().Get("recurse")
 	prefix := strings.Replace(r.URL.Path, "/v1/kv/", "", -1)
-	kvs1 := make([]KV, 0)
-	matcher := StartsWithMatcher{prefix: prefix}
-	for kv := range filterKV(mapKV(s.rconn.GetAllKV(), base64ToStringKV), matcher) {
-		kvs1 = append(kvs1, kv)
+	var matcher KVMatcher
+	if recurse != "" {
+		matcher = StartsWithMatcher{prefix: prefix}
+	} else {
+		matcher = ExactMatcher{prefix: prefix}
 	}
-	fmt.Fprintln(w, kvs1)
+
+	kvs := make([]KV, 0)
+	for kv := range filterKV(mapKV(s.rconn.GetAllKV(), base64ToStringKV), matcher) {
+		kvs = append(kvs, kv)
+	}
+	j, _ := json.Marshal(kvs)
+	fmt.Fprintln(w, string(j))
 }

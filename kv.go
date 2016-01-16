@@ -6,7 +6,8 @@ import (
 )
 
 type KV struct {
-	Key, Value string
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 func (k KV) StartsWith(prefix string) bool {
@@ -15,6 +16,8 @@ func (k KV) StartsWith(prefix string) bool {
 	}
 	return false
 }
+
+// filter functions
 
 type KVMatcher interface {
 	Match(kv KV) bool
@@ -28,8 +31,16 @@ func (m StartsWithMatcher) Match(kv KV) bool {
 	return kv.StartsWith(m.prefix)
 }
 
+type ExactMatcher struct {
+	prefix string
+}
+
+func (m ExactMatcher) Match(kv KV) bool {
+	return kv.Key == m.prefix
+}
+
 func filterKV(kvs <-chan KV, matcher KVMatcher) <-chan KV {
-	out := make(chan KV)
+	out := make(chan KV, 10)
 	go func() {
 		for kv := range kvs {
 			if ok := matcher.Match(kv); ok {
@@ -41,6 +52,8 @@ func filterKV(kvs <-chan KV, matcher KVMatcher) <-chan KV {
 	return out
 }
 
+// mapper functions
+
 func base64ToStringKV(kv KV) KV {
 	decKey, _ := base64.StdEncoding.DecodeString(kv.Key)
 	decVal, _ := base64.StdEncoding.DecodeString(kv.Value)
@@ -50,7 +63,7 @@ func base64ToStringKV(kv KV) KV {
 type mapperKVFunc func(kv KV) KV
 
 func mapKV(kvs <-chan KV, fn mapperKVFunc) <-chan KV {
-	out := make(chan KV)
+	out := make(chan KV, 10)
 	go func() {
 		for kv := range kvs {
 			out <- fn(kv)

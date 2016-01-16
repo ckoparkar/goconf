@@ -21,7 +21,7 @@ func NewRedisClient(opt *redis.Options) (*Redis, error) {
 
 func (r *Redis) GetAllKV() <-chan KV {
 	keys := r.GetAllKeys()
-	out := make(chan KV)
+	out := make(chan KV, 10)
 	go func() {
 		for k := range keys {
 			if v, err := r.Get(k).Result(); err == nil {
@@ -35,7 +35,7 @@ func (r *Redis) GetAllKV() <-chan KV {
 }
 
 func (r *Redis) GetAllKeys() <-chan string {
-	out := make(chan string)
+	out := make(chan string, 10)
 	go func() {
 		var cursor int64
 		for {
