@@ -11,7 +11,8 @@ type Redis struct {
 	*redis.Client
 }
 
-func NewRedisClient(opt *redis.Options) (*Redis, error) {
+func NewRedisClient(hostport string) (*Redis, error) {
+	opt := &redis.Options{Addr: hostport}
 	rconn := redis.NewClient(opt)
 	_, err := rconn.Ping().Result()
 	if err != nil {
@@ -64,4 +65,8 @@ func (r *Redis) GetACL(token string) []string {
 	aclString, _ := r.HGet("acl", token).Result()
 	acls := strings.Split(aclString, ",")
 	return acls
+}
+
+func (r *Redis) SetKV(kv KV) error {
+	return nil
 }

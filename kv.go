@@ -73,6 +73,12 @@ func base64ToStringKV(kv KV) KV {
 	return KV{Key: string(decKey), Value: string(decVal)}
 }
 
+func stringKVToBase64(kv KV) KV {
+	encKey := base64.StdEncoding.EncodeToString([]byte(kv.Key))
+	encVal := base64.StdEncoding.EncodeToString([]byte(kv.Value))
+	return KV{Key: string(encKey), Value: string(encVal)}
+}
+
 type mapperKVFunc func(kv KV) KV
 
 func mapKV(kvs <-chan KV, fn mapperKVFunc) <-chan KV {

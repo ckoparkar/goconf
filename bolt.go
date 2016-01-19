@@ -53,3 +53,17 @@ func (db *BoltDB) GetACL(token string) []string {
 	}
 	return strings.Split(string(aclByte), ",")
 }
+
+func (db *BoltDB) SetKV(kv KV) error {
+	err := db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte("kv"))
+		if err != nil {
+			return err
+		}
+		if err := b.Put([]byte(kv.Key), []byte(kv.Value)); err != nil {
+			return err
+		}
+		return nil
+	})
+	return err
+}

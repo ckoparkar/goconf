@@ -3,11 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
-
-	// redis "gopkg.in/redis.v3"
 )
 
 var (
@@ -19,7 +18,7 @@ type Server struct {
 }
 
 func NewServer() (*Server, error) {
-	// db, err := NewRedisClient(&redis.Options{Addr: "localhost:6379"})
+	// db, err := NewRedisClient("localhost:6379")
 	db, err := NewBoltDB("conf.db")
 	if err != nil {
 		return nil, err
@@ -30,10 +29,14 @@ func NewServer() (*Server, error) {
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case kvPattern.MatchString(r.URL.Path):
-		if r.Method == "GET" {
+		switch r.Method {
+		case "GET":
 			s.serveGetKV(w, r)
 			return
-		} else {
+		case "POST":
+			s.servePostKV(w, r)
+			return
+		default:
 			http.Error(w, "No route found.", http.StatusNotFound)
 			return
 		}
@@ -41,10 +44,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) serveGetKV(w http.ResponseWriter, r *http.Request) {
-	// create a matcher to filter out kv's protected by ACL
+	// create a filter to remove kv's protected by ACL
 	token := r.URL.Query().Get("token")
 	acls := s.store.GetACL(token)
-	aclMatcher := DoesNotStartWithMatcher{prefixes: acls}
+	aclFilter := DoesNotStartWithMatcher{prefixes: acls}
 
 	// create a matcher depending on recurse option
 	recurse := r.URL.Query().Get("recurse")
@@ -57,13 +60,34 @@ func (s *Server) serveGetKV(w http.ResponseWriter, r *http.Request) {
 	}
 
 	kvs := make([]KV, 0)
-	// for kv := range filterKV(filterKV(mapKV(s.store.GetAllKV(), base64ToStringKV), matcher), aclMatcher) {
-	//	kvs = append(kvs, kv)
-	// }
-	for kv := range filterKV(filterKV(s.store.GetAllKV(), matcher), aclMatcher) {
+	for kv := range filterKV(filterKV(s.store.GetAllKV(), matcher), aclFilter) {
 		kvs = append(kvs, kv)
 	}
-	fmt.Println(len(kvs))
 	j, _ := json.Marshal(kvs)
 	fmt.Fprintln(w, string(j))
+}
+
+func (s *Server) servePostKV(w http.ResponseWriter, r *http.Request) {
+	// create a filter to remove kv's protected by ACL
+	token := r.URL.Query().Get("token")
+	acls := s.store.GetACL(token)
+	aclFilter := DoesNotStartWithMatcher{prefixes: acls}
+
+	var kvs []KV
+	body, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(body, &kvs)
+
+	kvChan := make(chan KV, 10)
+	go func() {
+		for _, kv := range kvs {
+			kvChan <- kv
+		}
+		close(kvChan)
+	}()
+
+	for kv := range filterKV(kvChan, aclFilter) {
+		if err := s.store.SetKV(kv); err != nil {
+			fmt.Println(err)
+		}
+	}
 }
