@@ -45,6 +45,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "GET":
 			s.serveGetACL(w, r)
 			return
+		case "POST":
+			s.servePostACL(w, r)
+			return
+		default:
+			http.Error(w, "No route found.", http.StatusNotFound)
+			return
 		}
 	}
 }
@@ -105,4 +111,16 @@ func (s *Server) serveGetACL(w http.ResponseWriter, r *http.Request) {
 	}
 	j, _ := json.Marshal(acls)
 	fmt.Fprintln(w, string(j))
+}
+
+func (s *Server) servePostACL(w http.ResponseWriter, r *http.Request) {
+	var acls []KV
+	body, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(body, &acls)
+
+	for _, acl := range acls {
+		if err := s.store.SetACL(acl); err != nil {
+			fmt.Println(err)
+		}
+	}
 }

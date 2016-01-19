@@ -77,3 +77,7 @@ func (r *Redis) GetACL(token string) []string {
 func (r *Redis) SetKV(kv KV) error {
 	return nil
 }
+
+func (r *Redis) SetACL(kv KV) error {
+	return nil
+}

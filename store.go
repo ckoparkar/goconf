@@ -7,4 +7,5 @@ type Store interface {
 	GetACL(token string) []string
 
 	SetKV(kv KV) error
+	SetACL(kv KV) error
 }

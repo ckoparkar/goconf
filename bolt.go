@@ -63,8 +63,16 @@ func (db *BoltDB) GetACL(token string) []string {
 }
 
 func (db *BoltDB) SetKV(kv KV) error {
+	return db.setInBucket(kv, "kv")
+}
+
+func (db *BoltDB) SetACL(kv KV) error {
+	return db.setInBucket(kv, "acl")
+}
+
+func (db *BoltDB) setInBucket(kv KV, bucket string) error {
 	err := db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte("kv"))
+		b, err := tx.CreateBucketIfNotExists([]byte(bucket))
 		if err != nil {
 			return err
 		}
@@ -74,4 +82,5 @@ func (db *BoltDB) SetKV(kv KV) error {
 		return nil
 	})
 	return err
+
 }
