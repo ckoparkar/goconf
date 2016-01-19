@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"strings"
 
 	redis "gopkg.in/redis.v3"
 )
@@ -25,7 +26,6 @@ func (r *Redis) GetAllKV() <-chan KV {
 	go func() {
 		for k := range keys {
 			if v, err := r.Get(k).Result(); err == nil {
-				// kvs = append(kvs, KV{Key: k, Value: v})
 				out <- KV{Key: k, Value: v}
 			}
 		}
@@ -54,4 +54,14 @@ func (r *Redis) GetAllKeys() <-chan string {
 		}
 	}()
 	return out
+}
+
+func (r *Redis) GetACL(token string) []string {
+	tokenExists, _ := r.HExists("acl", token).Result()
+	if token == "" || !tokenExists {
+		token = "anonymous"
+	}
+	aclString, _ := r.HGet("acl", token).Result()
+	acls := strings.Split(aclString, ",")
+	return acls
 }
