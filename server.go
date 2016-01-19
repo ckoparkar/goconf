@@ -40,6 +40,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "No route found.", http.StatusNotFound)
 			return
 		}
+	case r.URL.Path == "/v1/acl":
+		switch r.Method {
+		case "GET":
+			s.serveGetACL(w, r)
+			return
+		}
 	}
 }
 
@@ -90,4 +96,13 @@ func (s *Server) servePostKV(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(err)
 		}
 	}
+}
+
+func (s *Server) serveGetACL(w http.ResponseWriter, r *http.Request) {
+	var acls []KV
+	for acl := range s.store.GetAllACL() {
+		acls = append(acls, acl)
+	}
+	j, _ := json.Marshal(acls)
+	fmt.Fprintln(w, string(j))
 }

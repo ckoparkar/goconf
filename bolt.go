@@ -19,11 +19,19 @@ func NewBoltDB(path string) (*BoltDB, error) {
 }
 
 func (db *BoltDB) GetAllKV() <-chan KV {
+	return db.getAllFromBucket("kv")
+}
+
+func (db *BoltDB) GetAllACL() <-chan KV {
+	return db.getAllFromBucket("acl")
+}
+
+func (db *BoltDB) getAllFromBucket(bucket string) <-chan KV {
 	out := make(chan KV, 10)
 	go func() {
 		db.View(func(tx *bolt.Tx) error {
 			// Assume bucket exists and has keys
-			b := tx.Bucket([]byte("kv"))
+			b := tx.Bucket([]byte(bucket))
 			c := b.Cursor()
 
 			for k, v := c.First(); k != nil; k, v = c.Next() {

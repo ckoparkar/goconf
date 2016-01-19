@@ -34,6 +34,13 @@ func (r *Redis) GetAllKV() <-chan KV {
 	}()
 	return out
 }
+func (r *Redis) GetAllACL() <-chan KV {
+	out := make(chan KV)
+	go func() {
+		close(out)
+	}()
+	return out
+}
 
 func (r *Redis) GetAllKeys() <-chan string {
 	out := make(chan string, 10)
