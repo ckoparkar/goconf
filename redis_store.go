@@ -75,19 +75,19 @@ func (r *RedisStore) GetACL(token string) []string {
 	return acls
 }
 
-func (r *RedisStore) SetKV(kv KV) error {
+func (r *RedisStore) SetKVs(kvs []KV) error {
 	return nil
 }
 
-func (r *RedisStore) DeleteKV(kv KV) error {
+func (r *RedisStore) DeleteKVs(kv []KV) error {
 	return nil
 }
 
-func (r *RedisStore) DeleteACL(kv KV) error {
+func (r *RedisStore) DeleteACLs(kv []KV) error {
 	return nil
 }
 
-func (r *RedisStore) SetACL(kv KV) error {
+func (r *RedisStore) SetACLs(kvs []KV) error {
 	return nil
 }
 

@@ -8,11 +8,11 @@ type Store interface {
 
 	GetACL(token string) []string
 
-	SetKV(kv KV) error
-	SetACL(kv KV) error
+	SetKVs(kvs []KV) error
+	SetACLs(kvs []KV) error
 
-	DeleteKV(kv KV) error
-	DeleteACL(kv KV) error
+	DeleteKVs(kvs []KV) error
+	DeleteACLs(kvs []KV) error
 
 	Backup(w io.Writer) (int, error)
 }

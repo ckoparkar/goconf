@@ -34,10 +34,8 @@ func (s *Server) servePostACL(w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(body, &acls)
 
-	for _, acl := range acls {
-		if err := s.store.SetACL(acl); err != nil {
-			log.Println("[ERR] " + err.Error())
-		}
+	if err := s.store.SetACLs(acls); err != nil {
+		log.Println("[ERR] " + err.Error())
 	}
 }
 
@@ -46,10 +44,11 @@ func (s *Server) serveDeleteACL(w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(body, &keys)
 
+	acls := make([]KV, 0)
 	for _, k := range keys {
-		acl := KV{Key: k, Value: ""}
-		if err := s.store.DeleteACL(acl); err != nil {
-			log.Println("[ERR] ", err)
-		}
+		acls = append(acls, KV{Key: k, Value: ""})
+	}
+	if err := s.store.DeleteACLs(acls); err != nil {
+		log.Println("[ERR] ", err)
 	}
 }

@@ -82,15 +82,15 @@ func (b *BoltStore) GetACL(token string) []string {
 	return strings.Split(string(acl), ",")
 }
 
-func (b *BoltStore) SetKV(kv KV) error {
-	return b.setInBucket(kv, dbKV)
+func (b *BoltStore) SetKVs(kvs []KV) error {
+	return b.setInBucket(kvs, dbKV)
 }
 
-func (b *BoltStore) SetACL(kv KV) error {
-	return b.setInBucket(kv, dbACL)
+func (b *BoltStore) SetACLs(kvs []KV) error {
+	return b.setInBucket(kvs, dbACL)
 }
 
-func (b *BoltStore) setInBucket(kv KV, bucketName []byte) error {
+func (b *BoltStore) setInBucket(kvs []KV, bucketName []byte) error {
 	tx, err := b.Begin(true)
 	if err != nil {
 		return err
@@ -98,21 +98,23 @@ func (b *BoltStore) setInBucket(kv KV, bucketName []byte) error {
 	defer tx.Rollback()
 
 	bucket := tx.Bucket(bucketName)
-	if err := bucket.Put([]byte(kv.Key), []byte(kv.Value)); err != nil {
-		return err
+	for _, kv := range kvs {
+		if err := bucket.Put([]byte(kv.Key), []byte(kv.Value)); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }
 
-func (b *BoltStore) DeleteKV(kv KV) error {
-	return b.deleteInBucket(kv, dbKV)
+func (b *BoltStore) DeleteKVs(kvs []KV) error {
+	return b.deleteInBucket(kvs, dbKV)
 }
 
-func (b *BoltStore) DeleteACL(kv KV) error {
-	return b.deleteInBucket(kv, dbACL)
+func (b *BoltStore) DeleteACLs(kvs []KV) error {
+	return b.deleteInBucket(kvs, dbACL)
 }
 
-func (b *BoltStore) deleteInBucket(kv KV, bucketName []byte) error {
+func (b *BoltStore) deleteInBucket(kvs []KV, bucketName []byte) error {
 	tx, err := b.Begin(true)
 	if err != nil {
 		return err
@@ -120,8 +122,8 @@ func (b *BoltStore) deleteInBucket(kv KV, bucketName []byte) error {
 	defer tx.Rollback()
 
 	bucket := tx.Bucket(bucketName)
-	if err := bucket.Delete([]byte(kv.Key)); err != nil {
-		return err
+	for _, kv := range kvs {
+		bucket.Delete([]byte(kv.Key))
 	}
 	return tx.Commit()
 }
