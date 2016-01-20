@@ -56,12 +56,12 @@ func (b *BoltStore) GetAllACL() <-chan KV {
 func (b *BoltStore) getAllFromBucket(bucketName []byte) <-chan KV {
 	out := make(chan KV, 10)
 
-	go func() {
-		tx, _ := b.Begin(true)
-		defer tx.Rollback()
+	tx, _ := b.Begin(true)
+	bucket := tx.Bucket(bucketName)
+	cursor := bucket.Cursor()
 
-		bucket := tx.Bucket(bucketName)
-		cursor := bucket.Cursor()
+	go func() {
+		defer tx.Rollback()
 		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 			out <- KV{Key: string(k), Value: string(v)}
 		}
@@ -106,6 +106,10 @@ func (b *BoltStore) setInBucket(kv KV, bucketName []byte) error {
 
 func (b *BoltStore) DeleteKV(kv KV) error {
 	return b.deleteInBucket(kv, dbKV)
+}
+
+func (b *BoltStore) DeleteACL(kv KV) error {
+	return b.deleteInBucket(kv, dbACL)
 }
 
 func (b *BoltStore) deleteInBucket(kv KV, bucketName []byte) error {

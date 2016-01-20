@@ -56,6 +56,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "POST":
 			s.servePostACL(w, r)
 			return
+		case "DELETE":
+			s.serveDeleteACL(w, r)
+			return
 		default:
 			http.Error(w, "No route found.", http.StatusNotFound)
 			return
@@ -172,6 +175,25 @@ func (s *Server) servePostACL(w http.ResponseWriter, r *http.Request) {
 	for _, acl := range acls {
 		if err := s.store.SetACL(acl); err != nil {
 			log.Println("[ERR] " + err.Error())
+		}
+	}
+}
+
+func (s *Server) serveDeleteACL(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token != *aclMasterToken {
+		http.Error(w, "Not authorized", http.StatusUnauthorized)
+		return
+	}
+
+	var keys []string
+	body, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(body, &keys)
+
+	for _, k := range keys {
+		acl := KV{Key: k, Value: ""}
+		if err := s.store.DeleteACL(acl); err != nil {
+			log.Println("[ERR] ", err)
 		}
 	}
 }

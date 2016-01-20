@@ -12,6 +12,7 @@ type Store interface {
 	SetACL(kv KV) error
 
 	DeleteKV(kv KV) error
+	DeleteACL(kv KV) error
 
 	Backup(w io.Writer) (int, error)
 }

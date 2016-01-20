@@ -83,6 +83,10 @@ func (r *RedisStore) DeleteKV(kv KV) error {
 	return nil
 }
 
+func (r *RedisStore) DeleteACL(kv KV) error {
+	return nil
+}
+
 func (r *RedisStore) SetACL(kv KV) error {
 	return nil
 }
