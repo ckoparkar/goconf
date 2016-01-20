@@ -122,10 +122,9 @@ function KeyValueStoreModel() {
             recurse = true;
         }
         // make api call here
-        $.ajax(url + "/v1/kv", {
-            // data: ko.toJSON({ key: key, value: t.val() }),
+        $.ajax(url + "/v1/kv" + "?token=" + t.aclToken(), {
             type: "delete", contentType: "application/json",
-            data: ko.toJSON({recurse: recurse, token: t.aclToken(), key: key}),
+            data: ko.toJSON([key]),
             success: function() {
                 $("#update-message").text("Deleted").addClass("update-success").fadeIn().delay(1000).fadeOut();
                 t.refresh();
