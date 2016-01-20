@@ -12,7 +12,8 @@ import (
 )
 
 var (
-	kvPattern = regexp.MustCompile("/v1/kv/?.*")
+	kvPattern  = regexp.MustCompile("(/v1/kv/?)(.*)")
+	aclPattern = regexp.MustCompile("/v1/acl/?")
 )
 
 type Server struct {
@@ -48,16 +49,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "No route found.", http.StatusNotFound)
 			return
 		}
-	case r.URL.Path == "/v1/acl":
+	case aclPattern.MatchString(r.URL.Path):
 		switch r.Method {
 		case "GET":
-			s.serveGetACL(w, r)
+			authorizeACL(s.serveGetACL)(w, r)
 			return
 		case "POST":
-			s.servePostACL(w, r)
+			authorizeACL(s.servePostACL)(w, r)
 			return
 		case "DELETE":
-			s.serveDeleteACL(w, r)
+			authorizeACL(s.serveDeleteACL)(w, r)
 			return
 		default:
 			http.Error(w, "No route found.", http.StatusNotFound)
@@ -80,7 +81,7 @@ func (s *Server) serveGetKV(w http.ResponseWriter, r *http.Request) {
 
 	// create a matcher depending on recurse option
 	recurse := r.URL.Query().Get("recurse")
-	prefix := strings.Replace(r.URL.Path, "/v1/kv/", "", -1)
+	prefix := kvPattern.ReplaceAllString(r.URL.Path, "$2")
 	var matcher KVMatcher
 	if recurse != "" {
 		matcher = StartsWithMatcher{prefix: prefix}
@@ -147,12 +148,18 @@ func (s *Server) serveDeleteKV(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) serveGetACL(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
-	if token != *aclMasterToken {
-		http.Error(w, "Not authorized", http.StatusUnauthorized)
-		return
+func authorizeACL(fn http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := r.URL.Query().Get("token")
+		if token != *aclMasterToken {
+			http.Error(w, "Not authorized", http.StatusUnauthorized)
+			return
+		}
+		fn(w, r)
 	}
+}
+
+func (s *Server) serveGetACL(w http.ResponseWriter, r *http.Request) {
 	var acls []KV
 	for acl := range s.store.GetAllACL() {
 		acls = append(acls, acl)
@@ -163,11 +170,6 @@ func (s *Server) serveGetACL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) servePostACL(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
-	if token != *aclMasterToken {
-		http.Error(w, "Not authorized", http.StatusUnauthorized)
-		return
-	}
 	var acls []KV
 	body, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(body, &acls)
@@ -180,12 +182,6 @@ func (s *Server) servePostACL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) serveDeleteACL(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
-	if token != *aclMasterToken {
-		http.Error(w, "Not authorized", http.StatusUnauthorized)
-		return
-	}
-
 	var keys []string
 	body, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(body, &keys)
