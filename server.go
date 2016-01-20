@@ -20,8 +20,8 @@ type Server struct {
 }
 
 func NewServer() (*Server, error) {
-	// db, err := NewRedisClient("localhost:6379")
-	db, err := NewBoltDB("conf.db")
+	// db, err := NewRedisStore("localhost:6379")
+	db, err := NewBoltStore("conf.db")
 	if err != nil {
 		return nil, err
 	}

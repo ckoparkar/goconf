@@ -8,21 +8,21 @@ import (
 	redis "gopkg.in/redis.v3"
 )
 
-type Redis struct {
+type RedisStore struct {
 	*redis.Client
 }
 
-func NewRedisClient(hostport string) (*Redis, error) {
+func NewRedisStore(hostport string) (*RedisStore, error) {
 	opt := &redis.Options{Addr: hostport}
 	rconn := redis.NewClient(opt)
 	_, err := rconn.Ping().Result()
 	if err != nil {
 		return nil, err
 	}
-	return &Redis{rconn}, nil
+	return &RedisStore{rconn}, nil
 }
 
-func (r *Redis) GetAllKV() <-chan KV {
+func (r *RedisStore) GetAllKV() <-chan KV {
 	keys := r.GetAllKeys()
 	out := make(chan KV, 10)
 	go func() {
@@ -35,7 +35,7 @@ func (r *Redis) GetAllKV() <-chan KV {
 	}()
 	return out
 }
-func (r *Redis) GetAllACL() <-chan KV {
+func (r *RedisStore) GetAllACL() <-chan KV {
 	out := make(chan KV)
 	go func() {
 		close(out)
@@ -43,7 +43,7 @@ func (r *Redis) GetAllACL() <-chan KV {
 	return out
 }
 
-func (r *Redis) GetAllKeys() <-chan string {
+func (r *RedisStore) GetAllKeys() <-chan string {
 	out := make(chan string, 10)
 	go func() {
 		var cursor int64
@@ -65,7 +65,7 @@ func (r *Redis) GetAllKeys() <-chan string {
 	return out
 }
 
-func (r *Redis) GetACL(token string) []string {
+func (r *RedisStore) GetACL(token string) []string {
 	tokenExists, _ := r.HExists("acl", token).Result()
 	if token == "" || !tokenExists {
 		token = "anonymous"
@@ -75,18 +75,18 @@ func (r *Redis) GetACL(token string) []string {
 	return acls
 }
 
-func (r *Redis) SetKV(kv KV) error {
+func (r *RedisStore) SetKV(kv KV) error {
 	return nil
 }
 
-func (r *Redis) DeleteKV(kv KV) error {
+func (r *RedisStore) DeleteKV(kv KV) error {
 	return nil
 }
 
-func (r *Redis) SetACL(kv KV) error {
+func (r *RedisStore) SetACL(kv KV) error {
 	return nil
 }
 
-func (r *Redis) Backup(w io.Writer) (int, error) {
+func (r *RedisStore) Backup(w io.Writer) (int, error) {
 	return 0, nil
 }
