@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -52,6 +53,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "No route found.", http.StatusNotFound)
 			return
 		}
+	case r.URL.Path == "/backup":
+		s.serveBackup(w, r)
+		return
+	default:
+		http.Error(w, "No route found.", http.StatusNotFound)
+		return
 	}
 }
 
@@ -123,4 +130,14 @@ func (s *Server) servePostACL(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(err)
 		}
 	}
+}
+
+func (s *Server) serveBackup(w http.ResponseWriter, r *http.Request) {
+	n, err := s.store.Backup(w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", `attachment; filename="my.db"`)
+	w.Header().Set("Content-Length", strconv.Itoa(n))
 }

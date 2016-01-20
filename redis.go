@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"strings"
 
@@ -80,4 +81,8 @@ func (r *Redis) SetKV(kv KV) error {
 
 func (r *Redis) SetACL(kv KV) error {
 	return nil
+}
+
+func (r *Redis) Backup(w io.Writer) (int, error) {
+	return 0, nil
 }

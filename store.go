@@ -1,5 +1,7 @@
 package main
 
+import "io"
+
 type Store interface {
 	GetAllKV() <-chan KV
 	GetAllACL() <-chan KV
@@ -8,4 +10,6 @@ type Store interface {
 
 	SetKV(kv KV) error
 	SetACL(kv KV) error
+
+	Backup(w io.Writer) (int, error)
 }

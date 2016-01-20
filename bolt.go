@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"strings"
 
 	"github.com/boltdb/bolt"
@@ -83,4 +84,17 @@ func (db *BoltDB) setInBucket(kv KV, bucket string) error {
 	})
 	return err
 
+}
+
+func (db *BoltDB) Backup(w io.Writer) (int, error) {
+	var n int64
+	err := db.View(func(tx *bolt.Tx) error {
+		var err error
+		n, err = tx.WriteTo(w)
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	return int(n), nil
 }
