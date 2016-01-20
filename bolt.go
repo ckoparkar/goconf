@@ -7,6 +7,11 @@ import (
 	"github.com/boltdb/bolt"
 )
 
+var (
+	dbKV  = []byte("kv")
+	dbACL = []byte("acl")
+)
+
 type BoltStore struct {
 	*bolt.DB
 }
@@ -16,103 +21,116 @@ func NewBoltStore(path string) (*BoltStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BoltStore{b}, nil
+	store := &BoltStore{b}
+	if err := store.initialize(); err != nil {
+		return nil, err
+	}
+	return store, nil
+}
+
+func (b *BoltStore) initialize() error {
+	tx, err := b.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Create all the buckets
+	if _, err := tx.CreateBucketIfNotExists(dbKV); err != nil {
+		return err
+	}
+	if _, err := tx.CreateBucketIfNotExists(dbACL); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (b *BoltStore) GetAllKV() <-chan KV {
-	return b.getAllFromBucket("kv")
+	return b.getAllFromBucket(dbKV)
 }
 
 func (b *BoltStore) GetAllACL() <-chan KV {
-	return b.getAllFromBucket("acl")
+	return b.getAllFromBucket(dbACL)
 }
 
-func (b *BoltStore) getAllFromBucket(bucket string) <-chan KV {
+func (b *BoltStore) getAllFromBucket(bucketName []byte) <-chan KV {
 	out := make(chan KV, 10)
+
 	go func() {
-		b.View(func(tx *bolt.Tx) error {
-			// Assume bucket exists and has keys
-			b := tx.Bucket([]byte(bucket))
-			c := b.Cursor()
+		tx, _ := b.Begin(true)
+		defer tx.Rollback()
 
-			for k, v := c.First(); k != nil; k, v = c.Next() {
-				out <- KV{Key: string(k), Value: string(v)}
-			}
-
-			close(out)
-			return nil
-		})
+		bucket := tx.Bucket(bucketName)
+		cursor := bucket.Cursor()
+		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+			out <- KV{Key: string(k), Value: string(v)}
+		}
+		close(out)
 	}()
 	return out
 }
 
 func (b *BoltStore) GetACL(token string) []string {
-	var aclByte []byte
-	b.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("acl"))
-		aclByte = b.Get([]byte(token))
-		return nil
-	})
-	if aclByte == nil {
-		b.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte("acl"))
-			aclByte = b.Get([]byte("anonymous"))
-			return nil
-		})
+	tx, _ := b.Begin(true)
+	defer tx.Rollback()
+
+	bucket := tx.Bucket(dbACL)
+	acl := bucket.Get([]byte(token))
+	if acl == nil {
+		acl = bucket.Get([]byte("anonymous"))
 	}
-	return strings.Split(string(aclByte), ",")
+	return strings.Split(string(acl), ",")
 }
 
 func (b *BoltStore) SetKV(kv KV) error {
-	return b.setInBucket(kv, "kv")
+	return b.setInBucket(kv, dbKV)
 }
 
 func (b *BoltStore) SetACL(kv KV) error {
-	return b.setInBucket(kv, "acl")
+	return b.setInBucket(kv, dbACL)
 }
 
-func (b *BoltStore) setInBucket(kv KV, bucket string) error {
-	err := b.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(bucket))
-		if err != nil {
-			return err
-		}
-		if err := b.Put([]byte(kv.Key), []byte(kv.Value)); err != nil {
-			return err
-		}
-		return nil
-	})
-	return err
+func (b *BoltStore) setInBucket(kv KV, bucketName []byte) error {
+	tx, err := b.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
+	bucket := tx.Bucket(bucketName)
+	if err := bucket.Put([]byte(kv.Key), []byte(kv.Value)); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (b *BoltStore) DeleteKV(kv KV) error {
-	return b.deleteInBucket(kv, "kv")
+	return b.deleteInBucket(kv, dbKV)
 }
 
-func (b *BoltStore) deleteInBucket(kv KV, bucket string) error {
-	err := b.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(bucket))
-		if err != nil {
-			return err
-		}
-		if err := b.Delete([]byte(kv.Key)); err != nil {
-			return err
-		}
-		return nil
-	})
-	return err
+func (b *BoltStore) deleteInBucket(kv KV, bucketName []byte) error {
+	tx, err := b.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	bucket := tx.Bucket(bucketName)
+	if err := bucket.Delete([]byte(kv.Key)); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (b *BoltStore) Backup(w io.Writer) (int, error) {
-	var n int64
-	err := b.View(func(tx *bolt.Tx) error {
-		var err error
-		n, err = tx.WriteTo(w)
-		return err
-	})
+	tx, err := b.Begin(true)
 	if err != nil {
-		return 0, err
+		return -1, err
+	}
+	defer tx.Rollback()
+	n, err := tx.WriteTo(w)
+	if err != nil {
+		return -1, err
 	}
 	return int(n), nil
 }
