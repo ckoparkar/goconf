@@ -1,10 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -52,13 +48,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case aclPattern.MatchString(r.URL.Path):
 		switch r.Method {
 		case "GET":
-			authorizeACL(s.serveGetACL)(w, r)
+			s.authorizeACL(s.serveGetACL)(w, r)
 			return
 		case "POST":
-			authorizeACL(s.servePostACL)(w, r)
+			s.authorizeACL(s.servePostACL)(w, r)
 			return
 		case "DELETE":
-			authorizeACL(s.serveDeleteACL)(w, r)
+			s.authorizeACL(s.serveDeleteACL)(w, r)
 			return
 		default:
 			http.Error(w, "No route found.", http.StatusNotFound)
@@ -70,127 +66,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "No route found.", http.StatusNotFound)
 		return
-	}
-}
-
-func (s *Server) serveGetKV(w http.ResponseWriter, r *http.Request) {
-	// create a filter to remove kv's protected by ACL
-	token := r.URL.Query().Get("token")
-	acls := s.store.GetACL(token)
-	aclFilter := DoesNotStartWithMatcher{prefixes: acls}
-
-	// create a matcher depending on recurse option
-	recurse := r.URL.Query().Get("recurse")
-	prefix := kvPattern.ReplaceAllString(r.URL.Path, "$2")
-	var matcher KVMatcher
-	if recurse != "" {
-		matcher = StartsWithMatcher{prefix: prefix}
-	} else {
-		matcher = ExactMatcher{prefix: prefix}
-	}
-
-	kvs := make([]KV, 0)
-	for kv := range filterKV(filterKV(s.store.GetAllKV(), matcher), aclFilter) {
-		kvs = append(kvs, kv)
-	}
-	j, _ := json.Marshal(kvs)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, string(j))
-}
-
-func (s *Server) servePostKV(w http.ResponseWriter, r *http.Request) {
-	// create a filter to remove kv's protected by ACL
-	token := r.URL.Query().Get("token")
-	acls := s.store.GetACL(token)
-	aclFilter := DoesNotStartWithMatcher{prefixes: acls}
-
-	var kvs []KV
-	body, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(body, &kvs)
-
-	kvChan := make(chan KV, 10)
-	go func() {
-		for _, kv := range kvs {
-			kvChan <- kv
-		}
-		close(kvChan)
-	}()
-
-	for kv := range filterKV(kvChan, aclFilter) {
-		if err := s.store.SetKV(kv); err != nil {
-			log.Println("[ERR] " + err.Error())
-		}
-	}
-}
-
-func (s *Server) serveDeleteKV(w http.ResponseWriter, r *http.Request) {
-	// create a filter to remove kv's protected by ACL
-	token := r.URL.Query().Get("token")
-	acls := s.store.GetACL(token)
-	aclFilter := DoesNotStartWithMatcher{prefixes: acls}
-
-	var keys []string
-	body, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(body, &keys)
-
-	kvChan := make(chan KV, 10)
-	go func() {
-		for _, k := range keys {
-			kvChan <- KV{Key: k, Value: ""}
-		}
-		close(kvChan)
-	}()
-
-	for kv := range filterKV(kvChan, aclFilter) {
-		if err := s.store.DeleteKV(kv); err != nil {
-			log.Println("[ERR] " + err.Error())
-		}
-	}
-}
-
-func authorizeACL(fn http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		token := r.URL.Query().Get("token")
-		if token != *aclMasterToken {
-			http.Error(w, "Not authorized", http.StatusUnauthorized)
-			return
-		}
-		fn(w, r)
-	}
-}
-
-func (s *Server) serveGetACL(w http.ResponseWriter, r *http.Request) {
-	var acls []KV
-	for acl := range s.store.GetAllACL() {
-		acls = append(acls, acl)
-	}
-	j, _ := json.Marshal(acls)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, string(j))
-}
-
-func (s *Server) servePostACL(w http.ResponseWriter, r *http.Request) {
-	var acls []KV
-	body, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(body, &acls)
-
-	for _, acl := range acls {
-		if err := s.store.SetACL(acl); err != nil {
-			log.Println("[ERR] " + err.Error())
-		}
-	}
-}
-
-func (s *Server) serveDeleteACL(w http.ResponseWriter, r *http.Request) {
-	var keys []string
-	body, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(body, &keys)
-
-	for _, k := range keys {
-		acl := KV{Key: k, Value: ""}
-		if err := s.store.DeleteACL(acl); err != nil {
-			log.Println("[ERR] ", err)
-		}
 	}
 }
 
