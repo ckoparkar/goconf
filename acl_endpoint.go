@@ -20,10 +20,7 @@ func (s *Server) authorizeACL(fn http.HandlerFunc) http.HandlerFunc {
 }
 
 func (s *Server) serveGetACL(w http.ResponseWriter, r *http.Request) {
-	var acls []KV
-	for acl := range s.store.GetAllACL() {
-		acls = append(acls, acl)
-	}
+	acls := s.store.GetAllACL()
 	j, _ := json.Marshal(acls)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(j))

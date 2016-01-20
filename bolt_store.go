@@ -45,29 +45,25 @@ func (b *BoltStore) initialize() error {
 	return tx.Commit()
 }
 
-func (b *BoltStore) GetAllKV() <-chan KV {
+func (b *BoltStore) GetAllKV() []KV {
 	return b.getAllFromBucket(dbKV)
 }
 
-func (b *BoltStore) GetAllACL() <-chan KV {
+func (b *BoltStore) GetAllACL() []KV {
 	return b.getAllFromBucket(dbACL)
 }
 
-func (b *BoltStore) getAllFromBucket(bucketName []byte) <-chan KV {
-	out := make(chan KV, 10)
-
+func (b *BoltStore) getAllFromBucket(bucketName []byte) []KV {
 	tx, _ := b.Begin(true)
+	defer tx.Rollback()
 	bucket := tx.Bucket(bucketName)
 	cursor := bucket.Cursor()
 
-	go func() {
-		defer tx.Rollback()
-		for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
-			out <- KV{Key: string(k), Value: string(v)}
-		}
-		close(out)
-	}()
-	return out
+	kvs := make([]KV, 0)
+	for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
+		kvs = append(kvs, KV{Key: string(k), Value: string(v)})
+	}
+	return kvs
 }
 
 func (b *BoltStore) GetACL(token string) []string {

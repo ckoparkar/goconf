@@ -3,8 +3,8 @@ package main
 import "io"
 
 type Store interface {
-	GetAllKV() <-chan KV
-	GetAllACL() <-chan KV
+	GetAllKV() []KV
+	GetAllACL() []KV
 
 	GetACL(token string) []string
 

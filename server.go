@@ -17,7 +17,6 @@ type Server struct {
 }
 
 func NewServer() (*Server, error) {
-	// db, err := NewRedisStore("localhost:6379")
 	db, err := NewBoltStore("conf.db")
 	if err != nil {
 		return nil, err

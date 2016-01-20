@@ -52,17 +52,14 @@ func (m DoesNotStartWithMatcher) Match(kv KV) bool {
 	return true
 }
 
-func filterKV(kvs <-chan KV, matcher KVMatcher) <-chan KV {
-	out := make(chan KV, 10)
-	go func() {
-		for kv := range kvs {
-			if ok := matcher.Match(kv); ok {
-				out <- kv
-			}
+func filterKV(kvs []KV, matcher KVMatcher) []KV {
+	filteredKVs := make([]KV, 0)
+	for _, kv := range kvs {
+		if ok := matcher.Match(kv); ok {
+			filteredKVs = append(filteredKVs, kv)
 		}
-		close(out)
-	}()
-	return out
+	}
+	return filteredKVs
 }
 
 // mapper functions
@@ -81,13 +78,10 @@ func stringKVToBase64(kv KV) KV {
 
 type mapperKVFunc func(kv KV) KV
 
-func mapKV(kvs <-chan KV, fn mapperKVFunc) <-chan KV {
-	out := make(chan KV, 10)
-	go func() {
-		for kv := range kvs {
-			out <- fn(kv)
-		}
-		close(out)
-	}()
-	return out
+func mapKV(kvs []KV, fn mapperKVFunc) []KV {
+	mappedKVs := make([]KV, 0)
+	for _, kv := range kvs {
+		mappedKVs = append(mappedKVs, kv)
+	}
+	return mappedKVs
 }
