@@ -29,6 +29,9 @@ func NewServer() (*Server, error) {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
+	case strings.HasPrefix(r.URL.Path, "/ui"):
+		http.ServeFile(w, r, r.URL.Path[1:])
+		return
 	case kvPattern.MatchString(r.URL.Path):
 		switch r.Method {
 		case "GET":
@@ -83,6 +86,7 @@ func (s *Server) serveGetKV(w http.ResponseWriter, r *http.Request) {
 		kvs = append(kvs, kv)
 	}
 	j, _ := json.Marshal(kvs)
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(j))
 }
 
@@ -117,6 +121,7 @@ func (s *Server) serveGetACL(w http.ResponseWriter, r *http.Request) {
 		acls = append(acls, acl)
 	}
 	j, _ := json.Marshal(acls)
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(j))
 }
 
@@ -138,6 +143,6 @@ func (s *Server) serveBackup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Disposition", `attachment; filename="my.db"`)
+	w.Header().Set("Content-Disposition", `attachment; filename="conf.db"`)
 	w.Header().Set("Content-Length", strconv.Itoa(n))
 }

@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+    <head>
+      <link rel="stylesheet" type="text/css" href="css/base.css">
+    </head>
+    <div id="ajaxloader">
+        <img src="res/loading_spinner.gif" alt="Loading..."/>
+    </div>
+    <body>
+        <p>
+          Token: <input data-bind="value: aclToken" />
+          <button data-bind="click: refresh">Refresh!</button>
+        </p>
+
+        <div id="tabs">
+            <a href="#kv" data-bind="click: setKV">KV</a>
+            <a href="#acl" data-bind="click: setACL">ACL</a>
+        </div>
+        <div data-bind="visible: displayKV, with: kv">
+            <p><a data-bind="click: goBackFromFolder,
+                             text: chosenFolderId() ? 'up' : null,
+                             attr: {href: chosenFolderId()}"></a></p>
+            <p data-bind="text: chosenFolderId"></p>
+            <form data-bind="submit: add">
+                <input data-bind="value: addKey"/>
+                <input data-bind="value: addVal"/>
+                <button type="submit">Add</button>
+            </form>
+            <table>
+                <tbody data-bind="foreach: folders">
+                    <tr>
+                        <td><a data-bind="text: key,
+                                          click: val() ? null : $root.goToFolder,
+                                          attr: {href: href}"></a></td>
+                        <td><textarea rows=3 data-bind="value: val, visible: val()"></textarea></td>
+                        <td><button data-bind="click: update, visible: val()">Update</button></td>
+                        <td><button data-bind="click: $parent.del">Delete</button></td>
+                        <td id="update-message"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
+        <script src="js/knockout-3.4.0.js"></script>
+        <script src="js/sammy.min.js"></script>
+        <script src="js/js.cookie-2.1.0.min.js"></script>
+        <script src="js/app.js"></script>
+        <script type="text/javascript">
+        </script>
+    </body>
+</html>

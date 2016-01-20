@@ -1,0 +1,40 @@
+body {
+    font-family: Verdana;
+    font-size: 16px;
+}
+
+#update-message {
+    display: none;
+}
+
+.update-success {
+    display: none;
+    color: green;
+}
+
+.update-failure {
+    display: none;
+    color: red;
+}
+
+a:visited {
+  color: blue;
+}
+
+div#ajaxloader {
+  display: none;
+  width:200px;
+  height: 200px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  text-align:center;
+  margin-left: -50px;
+  margin-top: -100px;
+  z-index:2;
+  overflow: auto;
+}
+
+textarea {
+   resize: none;
+}
