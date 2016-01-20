@@ -116,6 +116,11 @@ func (s *Server) servePostKV(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) serveGetACL(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token != *aclMasterToken {
+		http.Error(w, "Not authorized", http.StatusUnauthorized)
+		return
+	}
 	var acls []KV
 	for acl := range s.store.GetAllACL() {
 		acls = append(acls, acl)
@@ -126,6 +131,11 @@ func (s *Server) serveGetACL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) servePostACL(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token != *aclMasterToken {
+		http.Error(w, "Not authorized", http.StatusUnauthorized)
+		return
+	}
 	var acls []KV
 	body, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(body, &acls)

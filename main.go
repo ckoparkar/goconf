@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	listenAddr = flag.String("listen", ":8080", "HTTP listen address.")
+	listenAddr     = flag.String("listen", ":8080", "HTTP listen address.")
+	aclMasterToken = flag.String("master-token", "master", "ACL master token")
 )
 
 func main() {
