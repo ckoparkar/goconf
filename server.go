@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -39,6 +40,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		case "POST":
 			s.servePostKV(w, r)
+			return
+		case "DELETE":
+			s.serveDeleteKV(w, r)
 			return
 		default:
 			http.Error(w, "No route found.", http.StatusNotFound)
@@ -110,7 +114,32 @@ func (s *Server) servePostKV(w http.ResponseWriter, r *http.Request) {
 
 	for kv := range filterKV(kvChan, aclFilter) {
 		if err := s.store.SetKV(kv); err != nil {
-			fmt.Println(err)
+			log.Println("[ERR] " + err.Error())
+		}
+	}
+}
+
+func (s *Server) serveDeleteKV(w http.ResponseWriter, r *http.Request) {
+	// create a filter to remove kv's protected by ACL
+	token := r.URL.Query().Get("token")
+	acls := s.store.GetACL(token)
+	aclFilter := DoesNotStartWithMatcher{prefixes: acls}
+
+	var keys []string
+	body, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(body, &keys)
+
+	kvChan := make(chan KV, 10)
+	go func() {
+		for _, k := range keys {
+			kvChan <- KV{Key: k, Value: ""}
+		}
+		close(kvChan)
+	}()
+
+	for kv := range filterKV(kvChan, aclFilter) {
+		if err := s.store.DeleteKV(kv); err != nil {
+			log.Println("[ERR] " + err.Error())
 		}
 	}
 }
@@ -142,7 +171,7 @@ func (s *Server) servePostACL(w http.ResponseWriter, r *http.Request) {
 
 	for _, acl := range acls {
 		if err := s.store.SetACL(acl); err != nil {
-			fmt.Println(err)
+			log.Println("[ERR] " + err.Error())
 		}
 	}
 }

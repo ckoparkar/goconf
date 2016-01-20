@@ -86,6 +86,24 @@ func (db *BoltDB) setInBucket(kv KV, bucket string) error {
 
 }
 
+func (db *BoltDB) DeleteKV(kv KV) error {
+	return db.deleteInBucket(kv, "kv")
+}
+
+func (db *BoltDB) deleteInBucket(kv KV, bucket string) error {
+	err := db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte(bucket))
+		if err != nil {
+			return err
+		}
+		if err := b.Delete([]byte(kv.Key)); err != nil {
+			return err
+		}
+		return nil
+	})
+	return err
+}
+
 func (db *BoltDB) Backup(w io.Writer) (int, error) {
 	var n int64
 	err := db.View(func(tx *bolt.Tx) error {

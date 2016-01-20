@@ -79,6 +79,10 @@ func (r *Redis) SetKV(kv KV) error {
 	return nil
 }
 
+func (r *Redis) DeleteKV(kv KV) error {
+	return nil
+}
+
 func (r *Redis) SetACL(kv KV) error {
 	return nil
 }
