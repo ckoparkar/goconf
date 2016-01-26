@@ -24,7 +24,10 @@ func (s *Server) serveGetKV(w http.ResponseWriter, r *http.Request) {
 		matcher = ExactMatcher{prefix: prefix}
 	}
 
-	kvs := filterKV(filterKV(s.store.GetAllKV(), matcher), aclFilter)
+	kvs := make([]KV, 0)
+	for kv := range filterKV(filterKV(s.store.GetAllKV(), matcher), aclFilter) {
+		kvs = append(kvs, kv)
+	}
 	j, _ := json.Marshal(kvs)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(j))
@@ -40,8 +43,19 @@ func (s *Server) servePostKV(w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(body, &kvs)
 
-	kvs = filterKV(kvs, aclFilter)
-	if err := s.store.SetKVs(kvs); err != nil {
+	kvChan := make(chan KV, 10)
+	go func() {
+		for _, kv := range kvs {
+			kvChan <- kv
+		}
+		close(kvChan)
+	}()
+
+	filteredKVs := make([]KV, 0)
+	for kv := range filterKV(kvChan, aclFilter) {
+		filteredKVs = append(filteredKVs, kv)
+	}
+	if err := s.store.SetKVs(filteredKVs); err != nil {
 		log.Println("[ERR] " + err.Error())
 	}
 }
@@ -57,10 +71,14 @@ func (s *Server) serveDeleteKV(w http.ResponseWriter, r *http.Request) {
 	json.Unmarshal(body, &keys)
 
 	for _, k := range keys {
+		kvs := make([]KV, 0)
 		matcher := StartsWithMatcher{prefix: k}
-		kvs := filterKV(filterKV(s.store.GetAllKV(), matcher), aclFilter)
+		for kv := range filterKV(filterKV(s.store.GetAllKV(), matcher), aclFilter) {
+			kvs = append(kvs, kv)
+		}
 		if err := s.store.DeleteKVs(kvs); err != nil {
 			log.Println("[ERR] " + err.Error())
 		}
+
 	}
 }
