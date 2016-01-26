@@ -1,8 +1,8 @@
 package main
 
 import (
+	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -28,9 +28,10 @@ func (s *Server) serveGetKV(w http.ResponseWriter, r *http.Request) {
 	for kv := range filterKV(filterKV(s.store.GetAllKV(), matcher), aclFilter) {
 		kvs = append(kvs, kv)
 	}
-	j, _ := json.Marshal(kvs)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, string(j))
+	w.Header().Set("Content-Encoding", "gzip")
+	gz := gzip.NewWriter(w)
+	json.NewEncoder(gz).Encode(kvs)
+	gz.Close()
 }
 
 func (s *Server) servePostKV(w http.ResponseWriter, r *http.Request) {

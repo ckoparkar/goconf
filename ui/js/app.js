@@ -13,7 +13,8 @@ function getAllKVs(token) {
         async: false,
         data: {token: token},
         success: function(raw) {
-            kvs = $.map(raw, function(item) { return new KV(item.key, item.value); });
+            kvs = JSON.parse(raw);
+            kvs = $.map(kvs, function(item) { return new KV(item.key, item.value); });
             $('#ajaxloader').fadeOut();
         }
     });
