@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -26,6 +27,7 @@ func NewServer() (*Server, error) {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Println(r.Method, r.URL.Path)
 	switch {
 	case strings.HasPrefix(r.URL.Path, "/ui"):
 		http.ServeFile(w, r, r.URL.Path[1:])

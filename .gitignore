@@ -1,2 +1,5 @@
 conf.db
 vendor/
+ui/elm-stuff
+ui/elm.js
+ui/index.html
