@@ -1,6 +1,4 @@
 ## Dependencies
-* [Elm](http://elm-lang.org/)
-
 
     $ elm-package install
 
