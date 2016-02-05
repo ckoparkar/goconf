@@ -7,13 +7,16 @@ import Effects exposing (Effects, Never)
 import Http exposing (get)
 import Task exposing (Task)
 
-type Action =
-  KVsRetrived (Maybe (List KV))
+type Action
+  =
+    KVsRetrived (Maybe (List KV))
+  | SetActivePage String
+  | NoOp
 
 
 init : (Model, Effects Action)
 init =
-  ( Model []
+  ( Model [] ""
   , getAllKVs
   )
 
@@ -25,6 +28,12 @@ update action model =
       ( { model | kvs = (Maybe.withDefault [] xs) }
       , Effects.none
       )
+    SetActivePage page ->
+      ( { model | activePage = page }
+      , Effects.none
+      )
+    _ ->
+      ( model, Effects.none )
 
 
 getAllKVs : Effects.Effects Action

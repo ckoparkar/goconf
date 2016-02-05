@@ -21,6 +21,7 @@ folder kv =
 
 type alias Model =
   { kvs : List KV
+  , activePage : String
   }
 
 
@@ -29,11 +30,19 @@ type alias Model =
 uniqueKVs : List KV -> List KV
 uniqueKVs kvs =
   let
+    first : String -> String
+    first key =
+      String.split "/" key
+      |> List.head
+      |> Maybe.withDefault ""
     splitKey : KV -> (String, String)
     splitKey kv =
-      ( (String.split "/" kv.key
-        |> List.head
-        |> Maybe.withDefault "")
+      ( if folder kv
+        then
+          first kv.key
+          |> flip (++) "/"
+        else
+          first kv.key
       , kv.value)
   in
     List.map (\kv -> if folder kv
